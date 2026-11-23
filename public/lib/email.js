@@ -54,10 +54,9 @@ export function buildEmail(h, origin) {
 <div style="font-family:${FONT};font-size:14px;font-weight:600;color:#000;margin-top:2px;">${esc(v || '—')}</div></td>`;
   const tiles = summary(h).map((t) => `<td width="20%" valign="top" style="padding:0 4px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border:1px solid ${BRAND.line};border-top:4px solid ${t.colour};border-radius:10px;background:#fff;">
-<tr><td align="center" style="padding:8px 4px 9px;">
-<div style="font-family:${FONT};font-size:22px;line-height:26px;font-weight:700;color:#000;">${t.value}</div>
-<div style="font-family:${FONT};font-size:10.5px;line-height:13px;color:${BRAND.muted};">${esc(t.label)}</div>
-</td></tr></table></td>`).join('');
+<tr><td align="center" style="padding:8px 4px 0;font-family:${FONT};font-size:22px;line-height:26px;font-weight:700;color:#000;">${t.value}</td></tr>
+<tr><td align="center" valign="top" height="35" style="height:35px;padding:0 4px 9px;font-family:${FONT};font-size:10.5px;line-height:13px;color:${BRAND.muted};">${esc(t.label)}</td></tr>
+</table></td>`).join('');
   const stripe = [BRAND.teal, BRAND.orange, BRAND.purple, BRAND.sky].map((c) => `<td width="25%" height="6" style="background:${c};font-size:0;line-height:0;height:6px;">&nbsp;</td>`).join('');
 
   const html = `<table role="presentation" width="${W}" cellpadding="0" cellspacing="0" border="0" align="center" style="width:${W}px;max-width:100%;border-collapse:separate;background:#ffffff;border:1px solid ${BRAND.line};border-radius:14px;overflow:hidden;font-family:${FONT};color:#000;">
@@ -75,7 +74,7 @@ export function buildEmail(h, origin) {
 <tr><td style="padding:0 24px 14px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;background:${BRAND.wash};border:1px solid ${BRAND.line};border-radius:10px;"><tr><td style="padding:12px 16px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-${metaCell('Prepared by', m.preparedBy)}${metaCell('Handing over to', m.handoverTo)}${metaCell('Plant checks done', m.checksAt)}
+${metaCell('Prepared by', m.preparedBy)}${metaCell('Plant checks done', m.checksAt)}
 </tr></table>
 ${m.headline ? `<div style="margin-top:10px;padding:9px 12px;background:${BRAND.pale};border-radius:8px;font-family:${FONT};font-size:14px;line-height:20px;font-weight:600;color:#000;">📣 ${esc(m.headline)}</div>` : ''}
 </td></tr></table>

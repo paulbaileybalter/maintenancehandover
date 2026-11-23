@@ -18,7 +18,7 @@ Send it after the afternoon plant checks (Brisbane time).
 | Safety | Incidents, near misses, hazards, concerns |
 | Wins | Good repairs, proactive work, improvements |
 
-Every entry has an owner and a coloured status pill. The top of the sheet has Prepared by, Handing over to, Plant checks time, a one-line headline and a summary strip.
+Every entry has an owner and a coloured status pill. The top of the sheet has Prepared by, Plant checks time, a one-line headline and a summary strip.
 
 Handy buttons:
 - **Start today's plant checks** (in an empty Critical services section) adds a standard list of brewery services to tick through.

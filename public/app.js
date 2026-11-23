@@ -82,7 +82,7 @@ function renderSummary() {
 function renderOwners() {
   const names = new Set();
   for (const list of Object.values(state.h.sections)) for (const i of list) if (i.owner) names.add(i.owner);
-  for (const k of ['preparedBy', 'handoverTo']) if (state.h.meta[k]) names.add(state.h.meta[k]);
+  for (const k of ['preparedBy']) if (state.h.meta[k]) names.add(state.h.meta[k]);
   try { for (const n of JSON.parse(localStorage.getItem('owners') || '[]')) names.add(n); } catch { /* storage blocked */ }
   try { localStorage.setItem('owners', JSON.stringify([...names].slice(-40))); } catch { /* storage blocked */ }
   $('owners').innerHTML = [...names].sort().map((n) => `<option value="${esc(n)}">`).join('');

@@ -136,12 +136,11 @@ export const SECTIONS = [
 // "Start today’s plant checks" button.
 export const DEFAULT_SERVICES = [
   'Steam / boiler', 'Glycol / refrigeration', 'Compressed air', 'CO₂ supply',
-  'Nitrogen', 'Water / RO', 'Wastewater / effluent', 'Power', 'CIP',
+  'Water / RO', 'Wastewater / effluent', 'Power',
 ];
 
 export const META_FIELDS = [
   { key: 'preparedBy', label: 'Prepared by', max: 80 },
-  { key: 'handoverTo', label: 'Handing over to', max: 80 },
   { key: 'checksAt', label: 'Plant checks done', max: 40 },
   { key: 'headline', label: 'Headline for the next shift', max: 280 },
 ];
