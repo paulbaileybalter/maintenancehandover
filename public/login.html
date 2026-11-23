@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#47D7AC">
+<title>Sign in · Maintenance Handover</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body class="login-body">
+<div class="bubbles" id="bubbles" aria-hidden="true"></div>
+<main class="login-card">
+  <div class="stripe" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+  <img class="login-logo" src="/logo.svg" alt="Balter Brewing" width="72" height="72">
+  <span class="kicker">Balter Brewing · Maintenance</span>
+  <h1>Daily Maintenance Handover</h1>
+  <form id="loginForm" autocomplete="on">
+    <label class="fld"><span>Password</span>
+      <input type="password" id="password" name="password" autocomplete="current-password" required autofocus>
+    </label>
+    <button class="btn teal wide" type="submit" id="go">Sign in</button>
+    <p class="login-err" id="err" role="alert"></p>
+  </form>
+</main>
+<script src="/login.js"></script>
+</body>
+</html>

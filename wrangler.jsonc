@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "balter-maintenance-handover",
+  "main": "src/index.js",
+  "compatibility_date": "2025-09-01",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    // Every request goes through the Worker first, so nothing is served
+    // without a valid session (except the login page, fonts and logo).
+    "run_worker_first": true
+  },
+  "kv_namespaces": [
+    {
+      // No "id" on purpose: the first deploy creates this KV namespace
+      // automatically and binds it (Wrangler automatic provisioning).
+      // Later deploys reuse the same namespace.
+      "binding": "HANDOVER_KV"
+    }
+  ],
+  "observability": { "enabled": true }
+  // The password is NOT stored here. Add it as a secret named HANDOVER_PASSWORD
+  // in the Cloudflare dashboard (see README step 4).
+}

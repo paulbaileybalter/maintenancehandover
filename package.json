@@ -1,0 +1,14 @@
+{
+  "name": "balter-maintenance-handover",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Balter Brewing daily maintenance handover - Cloudflare Worker with KV",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.140.0"
+  }
+}
