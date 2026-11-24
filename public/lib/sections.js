@@ -60,18 +60,7 @@ export const SECTIONS = [
       f('owner', 'Owner', { short: true, owner: true }),
     ],
   },
-  {
-    key: 'workorders', title: 'Work orders', icon: '📋', accent: BRAND.purple,
-    blurb: 'Completed, outstanding and priority jobs',
-    sort: true,
-    fields: [
-      f('title', 'Job', { placeholder: 'e.g. Replace CIP pump seal', required: true }),
-      tag('Status', [o('Priority', 'orange'), o('Outstanding', 'sky'), o('Completed', 'teal')], 'Outstanding'),
-      f('extra', 'WO #', { placeholder: 'e.g. 10432', short: true }),
-      f('action', 'Next step', { placeholder: 'Leave blank if done' }),
-      f('owner', 'Owner', { short: true, owner: true }),
-    ],
-  },
+
   {
     key: 'planned', title: 'Planned maintenance', icon: '🗓️', accent: BRAND.sky,
     blurb: 'Key jobs for the next 24 to 48 hours',
@@ -96,18 +85,7 @@ export const SECTIONS = [
       f('owner', 'Host', { short: true, owner: true }),
     ],
   },
-  {
-    key: 'parts', title: 'Parts', icon: '📦', accent: BRAND.sky,
-    blurb: 'Critical spares or delays holding up repairs',
-    sort: true,
-    fields: [
-      f('title', 'Part', { placeholder: 'e.g. Seamer chuck', required: true }),
-      tag('Status', [o('Critical', 'orange'), o('Low stock', 'gold'), o('Delayed', 'gold'), o('Ordered', 'sky'), o('Arrived', 'teal')], 'Ordered'),
-      f('extra', 'ETA', { placeholder: 'e.g. Thu', short: true }),
-      f('detail', 'Holding up', { placeholder: 'Which repair / equipment' }),
-      f('owner', 'Owner', { short: true, owner: true }),
-    ],
-  },
+
   {
     key: 'safety', title: 'Safety', icon: '🦺', accent: BRAND.orange,
     blurb: 'Any incidents, hazards or concerns',
@@ -137,7 +115,7 @@ export const SECTIONS = [
 // "Start today’s plant checks" button.
 export const DEFAULT_SERVICES = [
   'Steam / boiler', 'Glycol / refrigeration', 'Compressed air', 'CO₂ supply',
-  'Water / RO', 'Wastewater / effluent', 'Power',
+  'Water / RO', 'Wastewater / effluent',
 ];
 
 export const META_FIELDS = [
@@ -170,7 +148,7 @@ export function summary(h) {
     { label: 'Services red / amber', value: n('critical', (i) => i.tag === 'Red' || i.tag === 'Amber'), colour: BRAND.teal },
     { label: 'Breakdowns', value: n('breakdowns'), colour: BRAND.orange },
     { label: 'Open issues', value: n('outstanding'), colour: BRAND.gold },
-    { label: 'Priority jobs', value: n('workorders', (i) => i.tag === 'Priority'), colour: BRAND.purple },
+    { label: 'Planned jobs', value: n('planned'), colour: BRAND.sky },
     { label: 'Safety items', value: n('safety', (i) => i.tag !== 'Closed'), colour: BRAND.orange },
   ];
 }

@@ -1,7 +1,5 @@
 import { SECTIONS, SECTION_BY_KEY, META_FIELDS, tagInfo, sortedItems, summary, longDate, shortDate, brisbaneToday, addDays, bneTime } from './lib/sections.js';
 import { buildEmail, copyHtml, downloadHtml, esc } from './lib/email.js';
-import { readSheet } from './lib/sheet-read.js';
-import { interpret, SITE } from './lib/fiix.js';
 
 const $ = (id) => document.getElementById(id);
 const state = { date: null, h: null, editing: null, syncedAt: null, error: '' };
@@ -131,9 +129,6 @@ function renderChips() {
   chips.push(state.error
     ? `<span class="chip warn"><i></i><b>Offline</b> ${esc(state.error)}</span>`
     : `<span class="chip"><i></i><b>In sync</b> ${state.h.updatedAt ? `last change ${bneTime(state.h.updatedAt)}` : 'nothing saved for this day yet'}</span>`);
-  if (state.h.meta.fiixAt) chips.push(`<span class="chip"><i style="background:var(--sky)"></i><b>Fiix</b> imported ${bneTime(state.h.meta.fiixAt)}</span>`);
-  const fx = $('fiixDrop'); fx.classList.toggle('ok', !!state.h.meta.fiixAt);
-  $('fiixState').textContent = state.h.meta.fiixAt ? `Imported at ${bneTime(state.h.meta.fiixAt)}${state.h.meta.fiixFile ? ` from ${state.h.meta.fiixFile}` : ''}. Drop a newer export to update.` : 'Drop your Fiix work order and parts exports here, or click to choose';
   if (state.date === today) chips.push('<span class="chip off"><i style="background:var(--gold)"></i>Send after the afternoon plant checks</span>');
   $('chips').innerHTML = chips.join('');
 }
@@ -259,45 +254,6 @@ async function deleteItem(form) {
   } catch (e) { toast(e.message); }
 }
 
-// ---------- Fiix import ----------
-let pending = null, loaded = [], siteOnly = true;
-async function handleFiix(files) {
-  if (!files.length || !state.h) return;
-  loaded = [];
-  for (const file of files) {
-    try { loaded.push({ file: file.name, rows: await readSheet(file) }); } catch (e) { loaded.push({ file: file.name, error: e.message }); }
-  }
-  showImport();
-}
-function showImport() {
-  const results = [], problems = [];
-  for (const f of loaded) {
-    if (f.error) { problems.push(`${f.file}: ${f.error}`); continue; }
-    try { results.push({ file: f.file, ...interpret(f.rows, state.date, { siteOnly }) }); } catch (e) { problems.push(`${f.file}: ${e.message}`); }
-  }
-  const entries = results.flatMap((r) => r.entries.list);
-  pending = { entries, files: results.map((r) => r.file).join(', ') };
-  const bySec = SECTIONS.map((s) => [s, entries.map((e, i) => [e, i]).filter(([e]) => e.section === s.key)]).filter(([, l]) => l.length);
-  $('iSub').textContent = entries.length ? `Found ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'} for ${longDate(state.date)}. Untick anything you don’t want.` : 'Nothing in these files needs to go on today’s handover.';
-  const files$ = results.map((r) => `<li>✓ <b>${esc(r.file)}</b>: ${r.kind === 'parts' ? 'parts list' : r.kind === 'schedule' ? 'scheduled maintenance' : 'work orders'}, ${r.entries.list.length} found, ${r.entries.skipped} not needed today${r.otherSite ? `, ${r.otherSite} from other sites left out` : ''}${r.entries.unplaceable ? ` (${r.entries.unplaceable} repeat every few weeks or months, so their dates can’t be worked out from this file)` : ''}${r.missing.length ? `<br>&nbsp;&nbsp;&nbsp;Add these columns to the Fiix view for more: ${r.missing.map(esc).join('; ')}` : ''}</li>`)
-    .concat(problems.map((p) => `<li>⚠ ${esc(p)}</li>`)).join('');
-  $('importList').innerHTML = `<label class="imp-site"><input type="checkbox" id="siteOnly" ${siteOnly ? 'checked' : ''}> ${SITE.name} only <small>(asset and stock location codes starting ${SITE.prefixes.join(' or ')})</small></label><ul class="imp-files">${files$}</ul>` + bySec.map(([s, list]) => `<div class="imp-sec"><h3><span class="ico" style="background:${s.accent}">${s.icon}</span>${esc(s.title)}<label class="imp-all"><input type="checkbox" data-all ${list.every(([e]) => !e.off) ? 'checked' : ''}> All ${list.length}</label></h3>${list.every(([e]) => e.off) ? '<p class="imp-hint">Long list, so nothing is ticked. Tick the ones worth calling out.</p>' : list.some(([e]) => e.off) ? '<p class="imp-hint">Ones where the site isn’t clear start unticked.</p>' : ''}${list.map(([e, i]) => `<label class="imp-row"><input type="checkbox" ${e.off ? '' : 'checked'} data-i="${i}"><span>${pill(tagInfo(s, e.item.tag))}</span><span><b>${esc(e.item.title)}</b>${e.item.extra ? ` · ${esc(e.item.extra)}` : ''}${e.item.owner ? ` · 👤 ${esc(e.item.owner)}` : ''}<small>${esc(e.reason)}${e.item.action ? ` · ${esc(e.item.action)}` : ''}${e.item.detail ? ` · ${esc(e.item.detail)}` : ''}</small></span></label>`).join('')}</div>`).join('');
-  $('iNote').textContent = 'Fiix entries are marked “Fiix”. Importing again updates them instead of adding duplicates.';
-  const nOn = entries.filter((e) => !e.off).length;
-  $('iApply').textContent = `Add ${nOn} to handover`; $('iApply').disabled = !nOn;
-  $('importOverlay').hidden = false;
-}
-async function applyImport() {
-  if (!pending) return;
-  const picked = [...$('importList').querySelectorAll('input[data-i]:checked')].map((c) => pending.entries[Number(c.dataset.i)]);
-  $('iApply').disabled = true;
-  try {
-    const { handover, imported } = await send({ type: 'import', file: pending.files, items: picked.map(({ section, item }) => ({ section, item })) });
-    accept(handover); render(); $('importOverlay').hidden = true;
-    toast(`Fiix import: ${imported.added} added, ${imported.updated} updated`);
-  } catch (e) { toast(e.message); $('iApply').disabled = false; }
-}
-
 // ---------- email ----------
 let email = null;
 function openEmail() {
@@ -364,28 +320,12 @@ function init() {
   secs.addEventListener('input', (e) => { if (e.target.matches('.chk-row [data-f=detail]')) saveCheck(e.target.closest('.chk-row'), 700); });
   secs.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.editing) { e.stopPropagation(); stopEdit(); } });
 
-  const drop = $('fiixDrop'), fin = $('fiixInput');
-  fin.onchange = () => { handleFiix([...fin.files]); fin.value = ''; };
-  drop.onkeydown = (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), fin.click());
-  ['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); }));
-  ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
-  drop.addEventListener('drop', (e) => handleFiix([...e.dataTransfer.files]));
-  $('iApply').onclick = applyImport;
-  $('importList').addEventListener('change', (e) => {
-    if (e.target.id === 'siteOnly') { siteOnly = e.target.checked; showImport(); return; }
-    if (e.target.matches('[data-all]')) for (const c of e.target.closest('.imp-sec').querySelectorAll('input[data-i]')) c.checked = e.target.checked;
-    const n = $('importList').querySelectorAll('input[data-i]:checked').length;
-    $('iApply').textContent = `Add ${n} to handover`; $('iApply').disabled = !n;
-  });
-  const closeImp = () => { $('importOverlay').hidden = true; pending = null; };
-  $('iClose').onclick = closeImp; $('iCancel').onclick = closeImp;
-  $('importOverlay').addEventListener('click', (e) => e.target === $('importOverlay') && closeImp());
 
   $('emailBtn').onclick = openEmail;
   const close = () => { $('overlay').hidden = true; };
   $('mClose').onclick = close;
   $('overlay').addEventListener('click', (e) => e.target === $('overlay') && close());
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { close(); closeImp(); } });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
   $('copyEmail').onclick = async () => {
     if (!email) return;
     toast((await copyHtml(email.html, $('emailPreview'))) ? 'Email copied. Paste it into a new message.' : 'Copy was blocked. Use Download .html instead.');
