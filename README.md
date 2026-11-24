@@ -25,6 +25,29 @@ Handy buttons:
 - **Carry over open items** brings forward anything still open from the last handover: unfixed breakdowns (as outstanding issues), outstanding issues, unfinished work orders, upcoming planned jobs, undelivered parts, open hazards and the plant checks list (reset to "Not checked"). Running it twice won't duplicate anything.
 - **‹ / ›** and the date picker move between days. Each day is kept.
 
+## Import from Fiix
+Your Fiix plan doesn't include API access, so the site reads Fiix **exports** instead. Drop one or more files on the **Import from Fiix** tile (.xlsx or .csv). You'll see a list of what will be added and can untick anything, then **Add to handover**. Imported entries are marked "Fiix". Importing again updates them rather than duplicating them, and owners, actions or notes the team typed are kept.
+
+What it picks up, for the day being viewed:
+
+| From Fiix | Goes to |
+|---|---|
+| Corrective / breakdown / emergency WO raised or closed today | Breakdowns (Still down / Fixed) |
+| Any WO completed today | Work orders · Completed |
+| Open high-priority WO | Work orders · Priority |
+| Open WO past its due date | Work orders · Outstanding |
+| Open preventive / scheduled WO starting in the next 48 h | Planned maintenance |
+| Work request | Outstanding issues |
+| Part at or below its minimum quantity | Parts (Critical if none left, otherwise Low stock) |
+
+Balter's Fiix views: **WorkOrdersAdministration** (work orders) and **CurrentStock** (parts). Fiix doesn't quote commas inside text in its CSVs, and the importer repairs those rows. A part kept in several bins is added up across the bins. If more than 8 parts are low, the parts list starts unticked so you pick the ones that matter. The work order view needs **Date Created, Date Completed, Suggested Start Date and Suggested Completion Date** columns for the breakdowns-today, completed-today, planned-48 h and overdue rules. Without them, open corrective WOs go to Outstanding issues, and high-priority and in-progress WOs go to Work orders.
+
+**Scheduled Maintenance list** (ScheduledMaintenanceList export): the importer reads the "When" rule and puts jobs due today, tomorrow or the day after into Planned maintenance. This works for rules tied to a date or weekday ("The 23rd day of every month", "Every year, on January 10th", "Every Monday and Thursday"). It can't place "Every 2 weeks on…" or "Every 3 months on…" because the export doesn't say when they started, and it skips inactive schedules and "Every day". The **Suggested Start Date** on the work order export is the more reliable source, because it reflects the work orders Fiix actually generated, including any that were moved.
+
+**Balter only:** Fiix is shared with sister sites. The import keeps only rows whose asset or stock location code starts with **BB** (for example `BB610-…`, `BB14-…`, `BBWORK`). It leaves out `4PB-…` and `PL-…`, and keeps rows with no code so nothing disappears silently. You can untick "Balter only" in the import window. The prefix list is `SITE` at the top of `public/lib/fiix.js`.
+
+Everything else (other open WOs, older closed WOs, parts with enough stock) is skipped to keep the handover short. Columns are found by their headings, so column order doesn't matter. The rules live in `public/lib/fiix.js`.
+
 ## Project layout
 
 ```
@@ -33,6 +56,8 @@ public/               The site (only served after login, except the login page, 
   index.html, app.js, styles.css
   lib/sections.js     Sections, fields, status colours (shared by site and Worker)
   lib/email.js        Builds the email-safe HTML
+  lib/fiix.js         Reads Fiix exports and decides which section each row goes to
+  lib/sheet-read.js   Reads .xlsx / .csv in the browser (no library)
   login.html, login.js
   logo.svg, favicon.svg, email-logo.png, fonts/ (Lexend)
 wrangler.jsonc        Worker config: static assets + KV binding

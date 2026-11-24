@@ -41,6 +41,12 @@
     </div>
   </section>
 
+  <label class="fiix-drop" id="fiixDrop" tabindex="0">
+    <span class="fiix-ico" aria-hidden="true">⬆</span>
+    <span class="fiix-body"><b>Import from Fiix</b><em id="fiixState">Drop your Fiix work order and parts exports here, or click to choose</em><small>.xlsx or .csv · you’ll see what will be added before anything changes</small></span>
+    <input type="file" id="fiixInput" accept=".xlsx,.csv,.txt" multiple hidden>
+  </label>
+
   <div class="sheet" id="sheet">
     <div class="stripe" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
     <div class="sheet-head">
@@ -81,6 +87,22 @@
     </div>
     <div class="modal-body"><div id="emailPreview" class="email-preview"></div></div>
     <p class="modal-foot">Paste into Outlook, Gmail or Apple Mail. The logo loads from this site, so some mail apps ask you to “show images”. Lexend only shows where the font is installed; others see a close match.</p>
+  </div>
+</div>
+ <div class="overlay" id="importOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="iTitle">
+    <div class="modal-head">
+      <div><h2 id="iTitle">Import from Fiix</h2><p id="iSub"></p></div>
+      <button class="btn icon" id="iClose" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body import-body" id="importList"></div>
+    <div class="modal-bar import-bar">
+      <span class="import-note" id="iNote"></span>
+      <div class="modal-actions">
+        <button class="btn ghost" id="iCancel">Cancel</button>
+        <button class="btn teal" id="iApply">Add to handover</button>
+      </div>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>

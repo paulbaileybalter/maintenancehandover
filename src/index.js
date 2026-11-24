@@ -147,6 +147,7 @@ function cleanItem(section, raw, existing) {
     if (v) item[fld.key] = v;
   }
   if (!item.title) return null;
+  if (raw?.src === 'fiix' || existing?.src === 'fiix') item.src = 'fiix';
   item.updatedAt = new Date().toISOString();
   return item;
 }
@@ -182,6 +183,29 @@ async function applyOp(request, env) {
       if (!section) return json({ error: 'Unknown section' }, 400);
       doc.sections[section.key] = doc.sections[section.key].filter((i) => i.id !== op.id);
       break;
+    }
+    case 'import': {
+      // Entries from a Fiix export. Matching ids update in place; anything the
+      // team typed (owner, action, notes) is kept when Fiix has nothing for it.
+      if (!Array.isArray(op.items) || op.items.length > 300) return json({ error: 'Bad import' }, 400);
+      let added = 0, updated = 0;
+      for (const { section: key, item: raw } of op.items) {
+        const sec = SECTION_BY_KEY[key]; if (!sec || !raw) continue;
+        // An entry may move section (e.g. planned job now completed): drop old copies.
+        for (const s of SECTIONS) if (s.key !== key) doc.sections[s.key] = doc.sections[s.key].filter((i) => i.id !== raw.id);
+        const list = doc.sections[key];
+        const idx = list.findIndex((i) => i.id === raw.id);
+        const prev = idx >= 0 ? list[idx] : null;
+        const merged = prev ? { ...prev, ...Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== '' && v != null)) } : { ...raw, src: 'fiix' };
+        const item = cleanItem(sec, merged, prev);
+        if (!item) continue;
+        if (prev) { list[idx] = item; updated++; } else if (list.length < MAX_ITEMS) { list.push(item); added++; }
+      }
+      doc.meta.fiixAt = new Date().toISOString();
+      doc.meta.fiixFile = clean(op.file, 120);
+      doc.updatedAt = doc.meta.fiixAt;
+      await env.HANDOVER_KV.put(kvKey(date), JSON.stringify(doc));
+      return json({ handover: doc, imported: { added, updated } });
     }
     case 'seedChecks': {
       const list = doc.sections.critical;

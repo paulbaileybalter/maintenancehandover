@@ -101,7 +101,7 @@ export const SECTIONS = [
     sort: true,
     fields: [
       f('title', 'Part', { placeholder: 'e.g. Seamer chuck', required: true }),
-      tag('Status', [o('Critical', 'orange'), o('Delayed', 'gold'), o('Ordered', 'sky'), o('Arrived', 'teal')], 'Ordered'),
+      tag('Status', [o('Critical', 'orange'), o('Low stock', 'gold'), o('Delayed', 'gold'), o('Ordered', 'sky'), o('Arrived', 'teal')], 'Ordered'),
       f('extra', 'ETA', { placeholder: 'e.g. Thu', short: true }),
       f('detail', 'Holding up', { placeholder: 'Which repair / equipment' }),
       f('owner', 'Owner', { short: true, owner: true }),
