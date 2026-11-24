@@ -10,9 +10,18 @@ import { addDays } from './sections.js';
 // Fiix is shared with sister sites. Balter's assets and stock locations have
 // codes starting "BB" (e.g. "Angelus Seamer (BB610-PCK-CL-SEAM)",
 // "Balter Workshop (BBWORK)"). Sister sites use 4PB- and PL-.
-export const SITE = { name: 'Balter', prefixes: ['BB'] };
+export const SITE = { name: 'Balter', prefixes: ['BB'], others: ['4PB', 'PL'] };
 const codeOf = (s) => { const m = String(s || '').replace(/[\uFEFF\u200B]/g, '').match(/\(([^()]*)\)\s*$/); return m ? m[1].trim() : ''; };
-const isSite = (s) => { const c = codeOf(s).toUpperCase(); return !c || SITE.prefixes.some((p) => c.startsWith(p)); };
+// 'here' | 'other' | 'unclear' (no code, or a code like "A1027" that doesn't
+// follow either pattern). Unclear rows are kept but start unticked.
+const siteOf = (s) => {
+  const c = codeOf(s).toUpperCase();
+  if (c && SITE.prefixes.some((p) => c.startsWith(p))) return 'here';
+  if (c && SITE.others.some((p) => c.startsWith(p))) return 'other';
+  return 'unclear';
+};
+let UNCLEAR = new WeakMap();
+const unclearNote = (r) => (UNCLEAR.has(r) ? ` · site unclear (${UNCLEAR.get(r) || 'no asset'})` : '');
 
 const COLS = {
   code: [/^(work ?order|wo)\s*(#|no\.?|number|code)?$/, /^code$/, /work order code/, /^wo\b/],
@@ -102,8 +111,14 @@ export function interpret(rows, date, { siteOnly = true } = {}) {
   // Drop other sites' rows (by asset code, or stock location code for parts).
   const siteCol = col.onHand !== undefined ? col.location : col.asset;
   let otherSite = 0;
+  UNCLEAR = new WeakMap();
   if (siteOnly && siteCol !== undefined) {
-    const here = data.filter((r) => (isSite(r[siteCol]) ? true : (otherSite++, false)));
+    const here = data.filter((r) => {
+      const s = siteOf(r[siteCol]);
+      if (s === 'other') { otherSite++; return false; }
+      if (s === 'unclear') UNCLEAR.set(r, codeOf(r[siteCol]));
+      return true;
+    });
     data.length = 0; data.push(...here);
   }
   const get = (r, k) => (col[k] === undefined ? '' : String(r[col[k]] ?? '').replace(/[\uFEFF\u200B]/g, '').trim());
@@ -155,11 +170,12 @@ function workOrderEntries(data, get, parse, D) {
       out.push({ section: 'outstanding', reason: `Open ${type.toLowerCase()} work order`, item: { ...base, title, tag: 'Open breakdown', detail: '', action: [code && wo(code), status].filter(Boolean).join(' · ') } });
     } else if ((due && due < D) || (!due && start && start < D && is(type, PLANNED))) {
       out.push({ section: 'workorders', reason: 'Open, overdue', item: { ...base, title, tag: 'Outstanding', extra: code, action: [assetNote, `Overdue since ${due || start}`].filter(Boolean).join(' · ') } });
-    } else if (is(status, /in progress/)) {
-      out.push({ section: 'workorders', reason: 'Work in progress', item: { ...base, title, tag: 'Outstanding', extra: code, action: 'In progress' } });
     } else {
-      skipped++;
+      // Every other open work order is listed as outstanding.
+      out.push({ section: 'workorders', reason: `Open${prio ? `, ${prio}` : ''}`, item: { ...base, title, tag: 'Outstanding', extra: code, action: /^open$/i.test(status) ? '' : status } });
     }
+    const last = out[out.length - 1];
+    if (last && last.row === undefined) { last.row = r; if (UNCLEAR.has(r)) { last.off = true; last.reason += unclearNote(r); } }
   }
   return { list: out, skipped };
 }
@@ -230,7 +246,7 @@ function scheduleEntries(data, get, D) {
     if (!hit) { skipped++; continue; }
     const owner = get(r, 'assigned').split(/[,;]/)[0].trim();
     const title = (asset && desc && !desc.toLowerCase().includes(asset.toLowerCase()) ? `${asset}: ${desc}` : desc || asset).slice(0, 140);
-    out.push({ section: 'planned', reason: `Scheduled: ${when}`, item: { id: `fiix-sm-${slug(code || title)}-${hit[0]}`, src: 'fiix', title, tag: hit[1], extra: asset && !title.toLowerCase().includes(asset.toLowerCase()) ? asset : '', detail: [code && `SM ${code}`, get(r, 'type'), get(r, 'priority')].filter(Boolean).join(' · '), owner } });
+    out.push({ off: UNCLEAR.has(r), section: 'planned', reason: `Scheduled: ${when}${unclearNote(r)}`, item: { id: `fiix-sm-${slug(code || title)}-${hit[0]}`, src: 'fiix', title, tag: hit[1], extra: asset && !title.toLowerCase().includes(asset.toLowerCase()) ? asset : '', detail: [code && `SM ${code}`, get(r, 'type'), get(r, 'priority')].filter(Boolean).join(' · '), owner } });
   }
   if (out.length > 10) for (const e of out) e.off = true;
   return { list: out, skipped, unplaceable };
