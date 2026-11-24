@@ -1,5 +1,6 @@
 // Builds an email-safe copy of the handover: tables + inline styles only,
 // laid out to match the website so it pastes into Outlook / Gmail cleanly.
+// Sections with no entries are left out of the email to keep it short.
 import { SECTIONS, BRAND, tagInfo, sortedItems, summary, longDate, shortDate } from './sections.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -28,18 +29,32 @@ ${line('detail', section.key === 'breakdowns')}${line('cause', true)}${line('act
 </tr>`;
 }
 
+function checkRow(section, it, last) {
+  const border = last ? '' : `border-bottom:1px solid ${BRAND.line};`;
+  const box = it.checked
+    ? `<span style="display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:5px;background:${BRAND.teal};color:#000;font-family:${FONT};font-size:12px;font-weight:700;">✓</span>`
+    : `<span style="display:inline-block;width:16px;height:16px;border:1px solid #cfcbbd;border-radius:5px;background:#fff;"></span>`;
+  return `<tr>
+<td valign="top" width="26" style="padding:9px 4px 9px 16px;${border}">${box}</td>
+<td valign="top" width="170" style="padding:9px 8px;${border}font-family:${FONT};font-size:14px;line-height:20px;font-weight:700;color:${it.checked ? '#000' : BRAND.muted};">${esc(it.title)}${it.checked ? '' : `<div style="font-size:11px;font-weight:400;color:${BRAND.muted};">Not checked</div>`}</td>
+<td valign="top" width="70" style="padding:9px 8px;${border}">${pill(tagInfo(section, it.tag))}</td>
+<td valign="top" style="padding:9px 16px 9px 8px;${border}font-family:${FONT};font-size:13px;line-height:19px;color:#2b2a26;">${esc(it.detail || '')}</td>
+</tr>`;
+}
+
 function sectionBlock(section, items) {
   const list = sortedItems(section, items);
+  const checks = section.layout === 'checks';
   const body = list.length
-    ? list.map((it, i) => itemRow(section, it, i === list.length - 1)).join('')
+    ? list.map((it, i) => (checks ? checkRow : itemRow)(section, it, i === list.length - 1)).join('')
     : `<tr><td colspan="3" style="padding:10px 16px 12px;font-family:${FONT};font-size:13px;color:${BRAND.muted};">Nothing to report.</td></tr>`;
   return `<tr><td style="padding:0 24px 14px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border:1px solid ${BRAND.line};border-left:5px solid ${section.accent};border-radius:10px;background:#ffffff;">
-<tr><td colspan="3" style="padding:11px 16px 9px;border-bottom:1px solid ${BRAND.line};">
+<tr><td colspan="${checks ? 4 : 3}" style="padding:11px 16px 9px;border-bottom:1px solid ${BRAND.line};">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
 <td width="34" valign="middle"><div style="width:28px;height:28px;line-height:28px;text-align:center;border-radius:8px;background:${section.accent};font-size:14px;">${section.icon}</div></td>
 <td valign="middle" style="font-family:${FONT};font-size:15px;line-height:20px;font-weight:700;color:#000;padding-left:6px;">${esc(section.title)} <span style="font-size:12px;font-weight:400;color:${BRAND.muted};">${esc(section.blurb)}</span></td>
-<td valign="middle" align="right" style="font-family:${FONT};font-size:12px;font-weight:700;color:${BRAND.muted};white-space:nowrap;">${list.length || ''}</td>
+<td valign="middle" align="right" style="font-family:${FONT};font-size:12px;font-weight:700;color:${BRAND.muted};white-space:nowrap;">${checks ? `${list.filter((i) => i.checked).length}/${list.length} checked` : list.length || ''}</td>
 </tr></table>
 </td></tr>
 ${body}
@@ -80,7 +95,7 @@ ${m.headline ? `<div style="margin-top:10px;padding:9px 12px;background:${BRAND.
 </td></tr></table>
 </td></tr>
 <tr><td style="padding:0 20px 16px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${tiles}</tr></table></td></tr>
-${SECTIONS.map((s) => sectionBlock(s, h.sections?.[s.key] || [])).join('')}
+${SECTIONS.filter((s) => (h.sections?.[s.key] || []).length).map((s) => sectionBlock(s, h.sections[s.key])).join('') || `<tr><td style="padding:0 24px 14px;font-family:${FONT};font-size:13px;color:${BRAND.muted};">Nothing to report today.</td></tr>`}
 <tr><td style="padding:4px 24px 20px;font-family:${FONT};font-size:11px;color:${BRAND.muted};text-align:center;">Sent after the afternoon plant checks · Brisbane time</td></tr>
 </table>`;
 

@@ -13,6 +13,8 @@ const C = {
   orange: [BRAND.orange, '#000'], gold: [BRAND.gold, '#000'], teal: [BRAND.teal, '#000'],
   sky: [BRAND.sky, '#000'], purple: [BRAND.purple, '#fff'], pale: [BRAND.pale, '#000'],
   grey: [BRAND.grey, '#3d3b35'], ink: ['#000', '#fff'],
+  // RAG red: the one colour outside the brand palette, because red has to read as red.
+  red: ['#E5534B', '#fff'],
 };
 
 const f = (key, label, extra = {}) => ({ key, label, ...extra });
@@ -22,15 +24,14 @@ const o = (value, colour) => ({ value, colour: C[colour] });
 export const SECTIONS = [
   {
     key: 'critical', title: 'Critical services', icon: '⚙️', accent: BRAND.teal,
-    blurb: 'Plant checks, levels and any issues',
+    blurb: 'Plant checks: done, RAG status and comments',
     sort: false,
+    layout: 'checks', // one row per service: tick box, RAG, comments, edited in place
     fields: [
       f('title', 'Service', { placeholder: 'e.g. Glycol / refrigeration', required: true }),
-      tag('Status', [o('Down', 'orange'), o('Watch', 'gold'), o('OK', 'teal'), o('Not checked', 'grey')], 'OK'),
-      f('extra', 'Level / reading', { placeholder: 'e.g. -4.2 °C, 78%', short: true }),
-      f('detail', 'Issue', { placeholder: 'Only if there is one' }),
-      f('action', 'Action', { placeholder: 'What happens next' }),
-      f('owner', 'Owner', { short: true, owner: true }),
+      f('checked', 'Checked', { type: 'check' }),
+      tag('RAG', [o('Red', 'red'), o('Amber', 'gold'), o('Green', 'teal')], ''),
+      f('detail', 'Comments', { placeholder: 'Readings, levels, issues' }),
     ],
   },
   {
@@ -166,7 +167,7 @@ export function summary(h) {
   const s = h?.sections || {};
   const n = (k, pred = () => true) => (s[k] || []).filter(pred).length;
   return [
-    { label: 'Services down / watch', value: n('critical', (i) => i.tag === 'Down' || i.tag === 'Watch'), colour: BRAND.teal },
+    { label: 'Services red / amber', value: n('critical', (i) => i.tag === 'Red' || i.tag === 'Amber'), colour: BRAND.teal },
     { label: 'Breakdowns', value: n('breakdowns'), colour: BRAND.orange },
     { label: 'Open issues', value: n('outstanding'), colour: BRAND.gold },
     { label: 'Priority jobs', value: n('workorders', (i) => i.tag === 'Priority'), colour: BRAND.purple },

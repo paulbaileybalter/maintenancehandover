@@ -144,6 +144,7 @@ function cleanItem(section, raw, existing) {
   for (const fld of section.fields) {
     let v = clean(raw?.[fld.key]);
     if (fld.type === 'select' && !fld.options.some((o) => o.value === v)) v = fld.default;
+    if (fld.type === 'check') v = v && v !== '0' && v !== 'false' ? '1' : '';
     if (v) item[fld.key] = v;
   }
   if (!item.title) return null;
@@ -210,7 +211,7 @@ async function applyOp(request, env) {
     case 'seedChecks': {
       const list = doc.sections.critical;
       const have = new Set(list.map((i) => i.title.toLowerCase()));
-      for (const title of DEFAULT_SERVICES) if (!have.has(title.toLowerCase())) list.push(cleanItem(SECTION_BY_KEY.critical, { title, tag: 'Not checked' }));
+      for (const title of DEFAULT_SERVICES) if (!have.has(title.toLowerCase())) list.push(cleanItem(SECTION_BY_KEY.critical, { title }));
       break;
     }
     case 'carry': {
@@ -252,7 +253,7 @@ function carryOver(prev, doc) {
 
   // Same plant checks list, but every service needs checking again.
   const have = new Set(doc.sections.critical.map((i) => i.title.toLowerCase()));
-  for (const i of P.critical || []) if (!have.has(i.title.toLowerCase())) push('critical', { id: i.id, title: i.title, tag: 'Not checked', owner: i.owner });
+  for (const i of P.critical || []) if (!have.has(i.title.toLowerCase())) push('critical', { id: i.id, title: i.title }); // fresh: unticked, no RAG
 
   // Breakdowns not fixed become outstanding issues.
   for (const i of P.breakdowns || []) {

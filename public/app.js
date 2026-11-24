@@ -53,8 +53,33 @@ function formHtml(section, it) {
   </form>`;
 }
 
+function checkRowHtml(section, it) {
+  const rag = section.fields.find((f) => f.key === 'tag').options;
+  return `<div class="chk-row${it.checked ? ' done' : ''}" data-id="${esc(it.id)}">
+    <label class="chk" title="Check done"><input type="checkbox" data-f="checked" ${it.checked ? 'checked' : ''} aria-label="${esc(it.title)} checked"><span></span></label>
+    <span class="chk-name">${esc(it.title)}</span>
+    <span class="rag" role="radiogroup" aria-label="RAG status for ${esc(it.title)}">${rag.map((o) => `<button type="button" role="radio" aria-checked="${it.tag === o.value}" data-rag="${o.value}" title="${o.value}" style="--c:${o.colour[0]}">${o.value[0]}</button>`).join('')}</span>
+    <input class="chk-comment" data-f="detail" value="${esc(it.detail || '')}" placeholder="Comments" maxlength="400" aria-label="Comments for ${esc(it.title)}">
+    <button type="button" class="chk-del" data-act="chkdel" title="Remove ${esc(it.title)}" aria-label="Remove ${esc(it.title)}">✕</button>
+  </div>`;
+}
+
 function sectionHtml(section) {
   const items = sortedItems(section, state.h.sections[section.key] || []);
+  if (section.layout === 'checks') {
+    const ed = state.editing?.section === section.key && !state.editing.id;
+    const done = items.filter((i) => i.checked).length;
+    return `<section class="card" id="sec-${section.key}" style="--accent:${section.accent}">
+      <div class="card-head">
+        <span class="ico">${section.icon}</span>
+        <h3>${esc(section.title)} <small>${esc(section.blurb)}</small></h3>
+        <span class="count">${items.length ? `${done}/${items.length} checked` : ''}</span>
+        <button class="btn small add" data-act="add" aria-label="Add a service">＋ Add</button>
+      </div>
+      ${ed ? formHtml({ ...section, fields: section.fields.filter((f) => f.key === 'title') }, {}) : ''}
+      ${items.length ? `<div class="chk-list">${items.map((it) => checkRowHtml(section, it)).join('')}</div>` : ed ? '' : '<div class="empty">No plant checks yet. <button class="linkbtn" data-act="seed">Start today’s plant checks</button></div>'}
+    </section>`;
+  }
   const ed = state.editing?.section === section.key ? state.editing : null;
   const rows = items.map((it) => (ed?.id === it.id ? formHtml(section, it) : itemHtml(section, it))).join('');
   const empty = !items.length && !(ed && !ed.id)
@@ -121,7 +146,11 @@ function render({ keepEditing = false } = {}) {
   if (!keepEditing || !document.querySelector('#sections .card')) {
     $('sections').innerHTML = SECTIONS.map(sectionHtml).join('');
   } else {
-    for (const s of SECTIONS) if (state.editing?.section !== s.key) renderSection(s.key);
+    for (const s of SECTIONS) {
+      if (state.editing?.section === s.key) continue;
+      if (s.layout === 'checks' && ($(`sec-${s.key}`)?.contains(document.activeElement) || chkTimers.size)) continue; // don't wipe a comment mid-typing
+      renderSection(s.key);
+    }
   }
   document.title = `Maintenance Handover ${shortDate(state.date)} · Balter Brewing`;
 }
@@ -170,6 +199,28 @@ function queueMeta(key) {
       $('metaSaved').textContent = `Saved ${bneTime(handover.updatedAt)}`;
     } catch (e) { $('metaSaved').textContent = `Not saved: ${e.message}`; }
   }, 700);
+}
+
+// ---------- plant checks (edited in place) ----------
+const chkTimers = new Map();
+function saveCheck(row, delay = 0) {
+  const id = row.dataset.id;
+  const it = state.h.sections.critical.find((i) => i.id === id); if (!it) return;
+  it.checked = row.querySelector('[data-f=checked]').checked ? '1' : '';
+  it.tag = row.querySelector('.rag [aria-checked=true]')?.dataset.rag || '';
+  it.detail = row.querySelector('[data-f=detail]').value;
+  row.classList.toggle('done', !!it.checked);
+  const done = state.h.sections.critical.filter((i) => i.checked).length;
+  row.closest('.card').querySelector('.count').textContent = `${done}/${state.h.sections.critical.length} checked`;
+  renderSummary();
+  clearTimeout(chkTimers.get(id));
+  chkTimers.set(id, setTimeout(async () => {
+    try {
+      const { handover } = await send({ type: 'upsert', section: 'critical', item: { id, title: it.title, checked: it.checked, tag: it.tag, detail: it.detail } });
+      chkTimers.delete(id);
+      accept(handover); renderSummary(); renderChips();
+    } catch (e) { chkTimers.delete(id); toast(`Not saved: ${e.message}`); }
+  }, delay));
 }
 
 // ---------- item editing ----------
@@ -289,6 +340,17 @@ function init() {
     if (act === 'add') return startEdit(key);
     if (act === 'cancel') return stopEdit();
     if (act === 'delete') return deleteItem(t.closest('form'));
+    if (act === 'chkdel') {
+      if (t.dataset.armed !== '1') { t.dataset.armed = '1'; t.textContent = 'Remove?'; t.classList.add('armed'); setTimeout(() => { t.dataset.armed = ''; t.textContent = '✕'; t.classList.remove('armed'); }, 3000); return; }
+      try { const { handover } = await send({ type: 'delete', section: 'critical', id: t.closest('.chk-row').dataset.id }); accept(handover); render(); } catch (x) { toast(x.message); }
+      return;
+    }
+    if (t.dataset.rag) {
+      const row = t.closest('.chk-row'); const on = t.getAttribute('aria-checked') !== 'true';
+      for (const b of t.parentElement.children) b.setAttribute('aria-checked', String(on && b === t));
+      if (on) row.querySelector('[data-f=checked]').checked = true; // picking a RAG means it was checked
+      return saveCheck(row);
+    }
     if (act === 'seed') {
       try { const { handover } = await send({ type: 'seedChecks' }); accept(handover); render(); } catch (x) { toast(x.message); }
       return;
@@ -298,6 +360,8 @@ function init() {
     }
   });
   secs.addEventListener('submit', (e) => { e.preventDefault(); saveForm(e.target); });
+  secs.addEventListener('change', (e) => { if (e.target.matches('.chk-row [data-f=checked]')) saveCheck(e.target.closest('.chk-row')); });
+  secs.addEventListener('input', (e) => { if (e.target.matches('.chk-row [data-f=detail]')) saveCheck(e.target.closest('.chk-row'), 700); });
   secs.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.editing) { e.stopPropagation(); stopEdit(); } });
 
   const drop = $('fiixDrop'), fin = $('fiixInput');

@@ -8,7 +8,7 @@ Send it after the afternoon plant checks (Brisbane time).
 
 | Section | What goes in |
 |---|---|
-| Critical services | Plant checks, levels and any issues (status: Down / Watch / OK / Not checked) |
+| Critical services | One row per plant check: a tick box for done, a RAG status (Red / Amber / Green) and a comments box, edited in place and saved as you go |
 | Breakdowns | What went down, downtime, root cause, action taken |
 | Outstanding issues | Open breakdowns, temp fixes, equipment at risk |
 | Work orders | Priority, outstanding and completed jobs, with WO # |
@@ -21,8 +21,8 @@ Send it after the afternoon plant checks (Brisbane time).
 Every entry has an owner and a coloured status pill. The top of the sheet has Prepared by, Plant checks time, a one-line headline and a summary strip.
 
 Handy buttons:
-- **Start today's plant checks** (in an empty Critical services section) adds a standard list of brewery services to tick through.
-- **Carry over open items** brings forward anything still open from the last handover: unfixed breakdowns (as outstanding issues), outstanding issues, unfinished work orders, upcoming planned jobs, undelivered parts, open hazards and the plant checks list (reset to "Not checked"). Running it twice won't duplicate anything.
+- **Start today's plant checks** (in an empty Critical services section) adds the standard list of plant checks (steam, glycol, air, CO₂, water, effluent, power). **＋ Add** adds another service and ✕ removes one. Picking a RAG colour ticks the box too.
+- **Carry over open items** brings forward anything still open from the last handover: unfixed breakdowns (as outstanding issues), outstanding issues, unfinished work orders, upcoming planned jobs, undelivered parts, open hazards and the plant checks list (unticked, with no RAG). Running it twice won't duplicate anything.
 - **‹ / ›** and the date picker move between days. Each day is kept.
 
 ## Import from Fiix
